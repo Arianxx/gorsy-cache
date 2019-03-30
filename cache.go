@@ -13,7 +13,7 @@ const (
 )
 
 // cacheCollected collects the specific cache object constructor.
-var cacheCollected = make(map[string]func(int) interface{})
+var cacheCollected = make(map[string]func() interface{})
 
 // cacheCounter distinguish anonymous cache store
 var cacheCounter int
@@ -65,13 +65,14 @@ func NewBuilder(name string, size int) (*cacheBuilder, error) {
 		return nil, fmt.Errorf("no specific cache was found")
 	}
 
-	c := f(size)
+	c := f()
 	if err := checkCacheValid(c); err != nil {
 		return nil, fmt.Errorf("specific cache invalid: %s", err.Error())
 	}
 
 	builder := &cacheBuilder{cache: c.(Cache)}
 	builder.bc = builder.cache.getBaseCache()
+	builder.bc.size = size
 	return builder, nil
 }
 
@@ -81,6 +82,9 @@ func (c *cacheBuilder) Build() Cache {
 	if c.bc.Name == "" {
 		c.bc.Name = fmt.Sprintf("cache: %d", cacheCounter)
 		cacheCounter++
+	}
+	if c.bc.Expiration == DefaultExpiration {
+		c.bc.Expiration = 60
 	}
 	c.cache.Init()
 	return c.cache

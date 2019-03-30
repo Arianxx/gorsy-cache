@@ -5,8 +5,8 @@ import (
 )
 
 func init() {
-	cacheCollected[SIMPLE] = func(size int) interface{} {
-		return &simpleCache{baseCache{size: size}, nil}
+	cacheCollected[SIMPLE] = func() interface{} {
+		return &simpleCache{}
 	}
 }
 
@@ -19,15 +19,12 @@ type simpleCache struct {
 	items map[interface{}]*simpleItem
 }
 
-func (c *simpleCache) Init() {
-	c.items = make(map[interface{}]*simpleItem, c.size)
-	if c.Expiration == DefaultExpiration {
-		c.Expiration = 60
-	}
-}
-
 func (c *simpleCache) getBaseCache() *baseCache {
 	return &c.baseCache
+}
+
+func (c *simpleCache) Init() {
+	c.items = make(map[interface{}]*simpleItem, c.size)
 }
 
 func (c *simpleCache) Get(key interface{}) (interface{}, error) {
@@ -41,8 +38,8 @@ func (c *simpleCache) GetOnlyPresent(key interface{}) (interface{}, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
-	v, exist := c.get(key, false)
-	if exist != nil {
+	v, err := c.get(key, false)
+	if err != nil {
 		return nil, false
 	} else {
 		return v, true
@@ -68,11 +65,11 @@ func (c *simpleCache) getFromLoader(key interface{}) (interface{}, error) {
 	if c.LoaderFunc != nil {
 		v, err = c.LoaderFunc(key)
 		if err != nil {
-			return nil, &KeyNotFoundError{c, key, err}
+			return nil, &KeyNotFoundError{c.Name, key, err}
 		}
 	}
 
-	return v, &KeyNotFoundError{c, key, nil}
+	return v, &KeyNotFoundError{c.Name, key, nil}
 }
 
 func (c *simpleCache) Set(key, value interface{}) {
@@ -87,8 +84,8 @@ func (c *simpleCache) set(key, value interface{}, expiration time.Duration) {
 		c.evict(1)
 	}
 
-	item := &simpleItem{key, value, nil}
-	item.setExpiration(expiration, c)
+	item := &simpleItem{baseItem{key, value, nil}}
+	item.setExpiration(expiration, &c.baseCache)
 	c.items[key] = item
 }
 
@@ -189,26 +186,5 @@ func (c *simpleCache) Len() int {
 }
 
 type simpleItem struct {
-	key, value interface{}
-	expiration *time.Time
-}
-
-func (s *simpleItem) isExpired() bool {
-	if s.expiration == nil {
-		return false
-	}
-
-	return s.expiration.Before(time.Now())
-}
-
-func (s *simpleItem) setExpiration(expiration time.Duration, c *simpleCache) {
-	if expiration == DefaultExpiration {
-		expiration = c.Expiration
-	}
-	if expiration != NoExpiration {
-		t := time.Now().Add(expiration * time.Second)
-		s.expiration = &t
-	} else {
-		s.expiration = nil
-	}
+	baseItem
 }
