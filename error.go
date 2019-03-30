@@ -3,9 +3,9 @@ package gorsy_cache
 import "fmt"
 
 type KeyNotFoundError struct {
-	Cache Cache
-	Key   interface{}
-	Err   error
+	Name string
+	Key  interface{}
+	Err  error
 }
 
 func (e *KeyNotFoundError) Error() string {
@@ -13,5 +13,5 @@ func (e *KeyNotFoundError) Error() string {
 	if e.Err != nil {
 		s += " with loader function error: " + e.Err.Error()
 	}
-	return fmt.Sprintf(s, e.Cache.getBaseCache().Name, e.Key)
+	return fmt.Sprintf(s, e.Name, e.Key)
 }
