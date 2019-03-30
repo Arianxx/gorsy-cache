@@ -10,6 +10,9 @@ import (
 const (
 	NoExpiration      = -1
 	DefaultExpiration = 0
+
+	NoPurge              = -1
+	DefaultPurgeInterval = 0
 )
 
 // cacheCollected collects the specific cache object constructor.
@@ -42,6 +45,8 @@ type baseCache struct {
 	Name string
 	// expiration provides a global expiration information for a cache store.
 	Expiration time.Duration
+	// PurgeInterval specifies the expired record collection interval.
+	PurgeInterval time.Duration
 	LoaderFunc
 	BeforeEvictedFunc
 }
@@ -86,7 +91,15 @@ func (c *cacheBuilder) Build() Cache {
 	if c.bc.Expiration == DefaultExpiration {
 		c.bc.Expiration = 60
 	}
+	if c.bc.PurgeInterval == DefaultPurgeInterval {
+		c.bc.PurgeInterval = 60
+	}
+
 	c.cache.Init()
+
+	if c.bc.PurgeInterval != NoPurge {
+		_ = StartPurge(&c.cache, c.bc.PurgeInterval)
+	}
 	return c.cache
 }
 
@@ -107,6 +120,11 @@ func (c *cacheBuilder) SetLoaderFunc(f LoaderFunc) *cacheBuilder {
 
 func (c *cacheBuilder) SetBeforeEvictedFunc(f BeforeEvictedFunc) *cacheBuilder {
 	c.bc.BeforeEvictedFunc = f
+	return c
+}
+
+func (c *cacheBuilder) SetPurgeInterval(t time.Duration) *cacheBuilder {
+	c.bc.PurgeInterval = t
 	return c
 }
 
