@@ -14,9 +14,9 @@ func beforeEvict(key, value interface{}) {
 }
 
 func main() {
-	builder, err := gorsy_cache.NewBuilder(gorsy_cache.SIMPLE, 10)
+	builder, err := gorsy_cache.NewBuilder(gorsy_cache.LRU, 10)
 	if err != nil {
-		panic("build cache: " + err.Error())
+		panic("build cache error: " + err.Error())
 	}
 	cache := builder.
 		SetName("rocket").
