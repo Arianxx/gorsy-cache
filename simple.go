@@ -80,11 +80,18 @@ func (c *simpleCache) Set(key, value interface{}) {
 }
 
 func (c *simpleCache) set(key, value interface{}, expiration time.Duration) {
+	item, ok := c.items[key]
+	if ok {
+		item.value = value
+		item.setExpiration(expiration, &c.baseCache)
+		return
+	}
+
 	if len(c.items) == c.size {
 		c.evict(1)
 	}
 
-	item := &simpleItem{baseItem{key, value, nil}}
+	item = &simpleItem{baseItem{key, value, nil}}
 	item.setExpiration(expiration, &c.baseCache)
 	c.items[key] = item
 }

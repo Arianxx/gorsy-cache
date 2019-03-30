@@ -53,7 +53,7 @@ func (c *lfuCache) get(key interface{}, fromLoader bool) (interface{}, error) {
 	item, ok := c.items[key]
 	if ok && !item.isExpired() {
 		item.freq++
-		heap.Remove(&c.heap, item.index)
+		heap.Fix(&c.heap, item.index)
 		return item.value, nil
 	}
 
@@ -85,6 +85,13 @@ func (c *lfuCache) Set(key, value interface{}) {
 }
 
 func (c *lfuCache) set(k, v interface{}, e time.Duration) {
+	ele, ok := c.items[k]
+	if ok {
+		ele.value = v
+		ele.setExpiration(e, &c.baseCache)
+		return
+	}
+
 	if len(c.items) == c.size {
 		c.evict(1)
 	}

@@ -31,15 +31,15 @@ func (c *lruCache) Init() {
 }
 
 func (c *lruCache) Get(key interface{}) (interface{}, error) {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 
 	return c.get(key, true)
 }
 
 func (c *lruCache) GetOnlyPresent(key interface{}) (interface{}, bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 
 	v, err := c.get(key, false)
 	if err != nil {
@@ -84,6 +84,14 @@ func (c *lruCache) Set(key, value interface{}) {
 }
 
 func (c *lruCache) set(k, v interface{}, e time.Duration) {
+	ele, ok := c.items[k]
+	if ok {
+		ele.Value.(*lruItem).value = v
+		ele.Value.(*lruItem).setExpiration(e, &c.baseCache)
+		c.list.PushBack(e)
+		return
+	}
+
 	if len(c.items) == c.size {
 		c.evict(1)
 	}
@@ -164,8 +172,7 @@ func (c *lruCache) CleanExpired() int {
 	}
 
 	for _, k := range expiredKey {
-		c.list.Remove(c.items[k])
-		delete(c.items, k)
+		c.remove(k)
 	}
 
 	return len(expiredKey)
